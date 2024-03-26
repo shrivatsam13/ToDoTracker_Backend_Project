@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,7 +38,7 @@ public class TaskServiceImpl implements TaskService{
         {
             throw new UserAlreadyExistsException();
         }
-        //return userTrackRepository.save(user);
+        //return userTaskRepository.save(user);
         User savedUser = userTaskRepository.save(user);
 
         if(!(savedUser.getUserEmail().isEmpty())) {
@@ -101,9 +103,62 @@ public class TaskServiceImpl implements TaskService{
             throw new UserNotFoundException();
         }
 
-        // Return the list of tracks in the user's track list
+        // Return the list of tasks in the user's task list
         System.out.println(user.getUserTaskList());
+        // Check if the task due date has passed
+        archiveTasksIfDueDatePassed(user);
         return user.getUserTaskList();
+    }
+
+    @Override
+    public void archiveTasksIfDueDatePassed(User user) {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        LocalDate currentDate = LocalDate.now();
+
+        System.out.println("Entered for checking dueDate wrt: " + currentDate);
+
+        List<Task> userTaskList = user.getUserTaskList();
+        System.out.println("Tasks in DB: " + userTaskList);
+
+        if (userTaskList != null) {
+            List<Task> tasksToArchive = new ArrayList<>();
+
+            for (Task task : userTaskList) {
+                String dueDateString = task.getTaskDueDate();
+                LocalDate dueDate = LocalDate.parse(dueDateString, dateFormatter);
+                System.out.println("Printing dueDate of Task: " + dueDate);
+                System.out.println("Printing dueDate before or not : " + dueDate.isBefore(currentDate));
+
+                Boolean isAlreadyPresent = user.getArchievedTaskList().contains(task);
+
+                if (dueDate != null && !task.isComplete() && !isAlreadyPresent && dueDate.isBefore(currentDate)) {
+                    System.out.println("Add task to archive");
+                    tasksToArchive.add(task);
+                }
+            }
+
+            if (!tasksToArchive.isEmpty()) {
+                System.out.println("We have tasks that are passed and need to be added :" + tasksToArchive);
+                // Move tasks to archived task list
+                List<Task> archivedTaskList = user.getArchievedTaskList();
+                if (archivedTaskList == null) {
+                    archivedTaskList = new ArrayList<>();
+                }
+                archivedTaskList.addAll(tasksToArchive);
+                System.out.println("Added task to archive");
+                user.setArchievedTaskList(archivedTaskList);
+                System.out.println("Updated task to archive");
+
+                // Remove tasks from the current task list
+                userTaskList.removeAll(tasksToArchive);
+                System.out.println("Removed task from task list");
+
+                // Save the updated user
+                userTaskRepository.save(user);
+                System.out.println("Updated list for user tasks: " + user.getUserTaskList());
+                System.out.println("Updated archived list for user tasks: " + user.getArchievedTaskList());
+            }
+        }
     }
 
     @Override
@@ -117,7 +172,7 @@ public class TaskServiceImpl implements TaskService{
         List<Task> tasks = user.getUserTaskList();
         boolean taskIdIsPresent = false;
 
-        // Check if the provided trackId exists in the user's track list
+        // Check if the provided taskId exists in the user's task list
         for (Task task : tasks) {
             if (task.getTaskId().equals(taskId)) {
                 taskIdIsPresent = true;
@@ -175,7 +230,7 @@ public class TaskServiceImpl implements TaskService{
             throw new UserNotFoundException();
         }
 
-        // Return the list of tracks in the user's track list
+        // Return the list of tasks in the user's task list
         return user.getArchievedTaskList();
     }
 
@@ -190,7 +245,7 @@ public class TaskServiceImpl implements TaskService{
         List<Task> tasks = user.getArchievedTaskList();
         boolean taskIdIsPresent = false;
 
-        // Check if the provided trackId exists in the user's track list
+        // Check if the provided taskId exists in the user's task list
         for (Task task : tasks) {
             if (task.getTaskId().equals(taskId)){
                 taskIdIsPresent = true;
@@ -250,7 +305,6 @@ public class TaskServiceImpl implements TaskService{
         }
 
         List<Task> tasks = user.getUserTaskList();
-        tasks.addAll(user.getArchievedTaskList());
         boolean taskIdIsPresent = false;
 
         // Check if the provided task exists in the user's task list
@@ -259,15 +313,15 @@ public class TaskServiceImpl implements TaskService{
 
             Task existingTask = tasks.get(i);
 
-            // If the track with the same ID is found, update it
+            // If the task with the same ID is found, update it
             if (existingTask.getTaskId().equals(task.getTaskId())) {
-                // Check if the track with the same name already exists in the user's wish list
+                // Check if the task with the same name already exists in the user's wish list
                 if (tasks.stream().anyMatch(t -> t != existingTask && t.getTaskTitle().equals(task.getTaskTitle())))
                 {
                     throw new TaskAlreadyExistsException();
                 }
                 System.out.println("Entered 2");
-                // Update the track details
+                // Update the task details
                 existingTask.setTaskTitle(task.getTaskTitle());
                 existingTask.setTaskContent(task.getTaskContent());
                 existingTask.setTaskPriority(task.getTaskPriority());
@@ -282,7 +336,53 @@ public class TaskServiceImpl implements TaskService{
             }
         }
 
-        // If the track doesn't exist in the user's wish list, throw a TrackNotFoundException
+        // If the task doesn't exist in the user's wish list, throw a TaskNotFoundException
+        throw new TaskNotFoundException();
+    }
+
+    @Override
+    public List<Task> updateArchivedTaskListWithGivenTask(String userId, Task task) throws UserNotFoundException, TaskNotFoundException, TaskAlreadyExistsException {
+        // Update the specific details of User
+        // Retrieve the user by ID
+        User user = userTaskRepository.findById(userId).orElse(null);
+        System.out.println(task);
+        if (user == null) {
+            throw new UserNotFoundException();
+        }
+
+        List<Task> tasks = user.getArchievedTaskList();
+        boolean taskIdIsPresent = false;
+
+        // Check if the provided task exists in the user's task list
+        for (int i = 0; i < tasks.size(); i++) {
+            System.out.println("Entered 1");
+
+            Task existingTask = tasks.get(i);
+
+            // If the task with the same ID is found, update it
+            if (existingTask.getTaskId().equals(task.getTaskId())) {
+                // Check if the task with the same name already exists in the user's wish list
+                if (tasks.stream().anyMatch(t -> t != existingTask && t.getTaskTitle().equals(task.getTaskTitle())))
+                {
+                    throw new TaskAlreadyExistsException();
+                }
+                System.out.println("Entered 2");
+                // Update the task details
+                existingTask.setTaskTitle(task.getTaskTitle());
+                existingTask.setTaskContent(task.getTaskContent());
+                existingTask.setTaskPriority(task.getTaskPriority());
+                existingTask.setTaskDueDate(task.getTaskDueDate());
+                existingTask.setComplete(task.isComplete());
+                System.out.println("Entered 3");
+                // Save the updated user
+                userTaskRepository.save(user);
+                System.out.println("Entered 4, Updated");
+                System.out.println(userTaskRepository.save(user));
+                return user.getUserTaskList();
+            }
+        }
+
+        // If the task doesn't exist in the user's wish list, throw a TaskNotFoundException
         throw new TaskNotFoundException();
     }
 

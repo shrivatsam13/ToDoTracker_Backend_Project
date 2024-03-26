@@ -202,6 +202,27 @@ public class TaskController {
         }
     }
 
+    @PutMapping("user/updateArchivedTask")
+    public ResponseEntity<?> updateArchivedTask(@RequestBody Task task, HttpServletRequest request) {
+        try {
+            // Extract the user ID from the request claims
+            Claims claims = (Claims) request.getAttribute("claims");
+            String userId = claims.getSubject();
+
+            // Call the service to update the task
+            System.out.println("Inside controller, updating archived task");
+            List<Task> updatedTaskList = taskService.updateArchivedTaskListWithGivenTask(userId, task);
+
+            return new ResponseEntity<>(updatedTaskList, HttpStatus.OK);
+        } catch (UserNotFoundException e) {
+            return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+        } catch (TaskNotFoundException e) {
+            return new ResponseEntity<>("Task not found", HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to update the task", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @PutMapping("user/markTaskAsCompleted/{taskId}")
     public ResponseEntity<?> markTaskAsCompleted(@PathVariable UUID taskId, HttpServletRequest request) {
         System.out.println("inside controller task completion: 1");

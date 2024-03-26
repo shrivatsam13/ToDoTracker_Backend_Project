@@ -16,6 +16,7 @@ public interface TaskService {
     String removeUser(User user) throws UserNotFoundException;
 
     List<User> getAllUsers();
+    void archiveTasksIfDueDatePassed(User user);
 
     List<Task> saveTaskToTaskList(Task task, String userEmail) throws TaskAlreadyExistsException, UserNotFoundException;
 
@@ -32,6 +33,8 @@ public interface TaskService {
     User moveTaskFromArchiveToTaskList(String userEmail, Task task) throws TaskNotFoundException, UserNotFoundException, TaskAlreadyExistsException;
 
     List<Task> updateUserTaskListWithGivenTask(String userEmail,Task task) throws UserNotFoundException, TaskNotFoundException, TaskAlreadyExistsException;
+
+    List<Task> updateArchivedTaskListWithGivenTask(String userId, Task task) throws UserNotFoundException, TaskNotFoundException, TaskAlreadyExistsException;
 
     Task markTaskAsCompleted(String userId,  UUID taskId) throws UserNotFoundException, TaskNotFoundException;
 }
