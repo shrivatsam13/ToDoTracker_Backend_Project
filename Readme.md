@@ -1,6 +1,6 @@
 # Backend part of ToDo Tracker Web App
 
-- This Project serves as Backend Dependency for https://github.com/shrivatsam13/TODO_Tracker_Frontend.
+- This Project serves as Backend Dependency for "[TODO_Tracker_Frontend](https://github.com/shrivatsam13/TODO_Tracker_Frontend)".
 - Contains all the APIs to add, delete, edit, archive task along with marking it as completing.
 - This also serves as an authentication layer by providing only access to the authorised users.
 - This contains APIs to register, login and authenticate users for keeping track of the tasks.
